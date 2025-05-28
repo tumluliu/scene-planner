@@ -187,10 +187,11 @@ app.get('/api/sample-prompts', (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 Mock Scene Generation API running on http://localhost:${PORT}`);
-    console.log(`📝 Legacy endpoint: POST http://localhost:${PORT}/api/text-to-gif`);
-    console.log(`🎨 Generic endpoint: POST http://localhost:${PORT}/api/text-to-scene`);
-    console.log(`❤️  Health check: GET http://localhost:${PORT}/api/health`);
-    console.log(`💡 Sample prompts: GET http://localhost:${PORT}/api/sample-prompts`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Mock Scene Generation API running on http://0.0.0.0:${PORT}`);
+    console.log(`📝 Legacy endpoint: POST http://0.0.0.0:${PORT}/api/text-to-gif`);
+    console.log(`🎨 Generic endpoint: POST http://0.0.0.0:${PORT}/api/text-to-scene`);
+    console.log(`❤️  Health check: GET http://0.0.0.0:${PORT}/api/health`);
+    console.log(`💡 Sample prompts: GET http://0.0.0.0:${PORT}/api/sample-prompts`);
+    console.log(`🌐 Also accessible via localhost: http://localhost:${PORT}`);
 }); 

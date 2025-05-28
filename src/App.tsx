@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Sparkles, Download, Loader2, Image as ImageIcon, Wand2 } from 'lucide-react'
 import { clsx } from 'clsx'
 
@@ -14,15 +14,43 @@ function App() {
     const [isLoading, setIsLoading] = useState(false)
     const [generationResult, setGenerationResult] = useState<GenerationResult | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [samplePrompts, setSamplePrompts] = useState<string[]>([])
+    const [isLoadingPrompts, setIsLoadingPrompts] = useState(true)
 
-    const samplePrompts = [
-        "A cat wearing sunglasses walking through a neon-lit cyberpunk city",
-        "A majestic dragon breathing fire in a medieval castle",
-        "Astronauts floating in space with Earth in the background",
-        "Ocean waves crashing against rocks during a storm",
-        "A magical forest with glowing mushrooms and fireflies",
-        "Lightning striking a futuristic city skyline"
-    ]
+    // Fetch sample prompts from the API
+    useEffect(() => {
+        const fetchSamplePrompts = async () => {
+            try {
+                const apiHost = window.location.hostname;
+                const response = await fetch(`http://${apiHost}:3001/api/sample-prompts`);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setSamplePrompts(data.prompts || []);
+                } else {
+                    console.warn('Failed to fetch sample prompts, using fallback');
+                    // Fallback prompts in case API is unavailable
+                    setSamplePrompts([
+                        "A cat wearing sunglasses walking through a neon-lit cyberpunk city",
+                        "A majestic dragon breathing fire in a medieval castle",
+                        "Astronauts floating in space with Earth in the background"
+                    ]);
+                }
+            } catch (error) {
+                console.warn('Error fetching sample prompts:', error);
+                // Fallback prompts in case of network error
+                setSamplePrompts([
+                    "A cat wearing sunglasses walking through a neon-lit cyberpunk city",
+                    "A majestic dragon breathing fire in a medieval castle",
+                    "Astronauts floating in space with Earth in the background"
+                ]);
+            } finally {
+                setIsLoadingPrompts(false);
+            }
+        };
+
+        fetchSamplePrompts();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -34,7 +62,9 @@ function App() {
 
         try {
             // Using mock API endpoint for testing
-            const response = await fetch('http://localhost:3001/api/text-to-gif', {
+            // Use the same host as the frontend but on port 3001
+            const apiHost = window.location.hostname;
+            const response = await fetch(`http://${apiHost}:3001/api/text-to-gif`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -136,19 +166,26 @@ function App() {
                         {/* Sample Prompts */}
                         <div className="mt-4">
                             <p className="text-sm text-gray-600 mb-3">Try these sample prompts:</p>
-                            <div className="flex flex-wrap gap-2">
-                                {samplePrompts.map((sample, index) => (
-                                    <button
-                                        key={index}
-                                        type="button"
-                                        onClick={() => setPrompt(sample)}
-                                        disabled={isLoading}
-                                        className="text-xs px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full transition-colors duration-200 disabled:opacity-50"
-                                    >
-                                        {sample.length > 40 ? `${sample.substring(0, 40)}...` : sample}
-                                    </button>
-                                ))}
-                            </div>
+                            {isLoadingPrompts ? (
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Loading sample prompts...
+                                </div>
+                            ) : (
+                                <div className="flex flex-wrap gap-2">
+                                    {samplePrompts.map((sample, index) => (
+                                        <button
+                                            key={index}
+                                            type="button"
+                                            onClick={() => setPrompt(sample)}
+                                            disabled={isLoading}
+                                            className="text-xs px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full transition-colors duration-200 disabled:opacity-50"
+                                        >
+                                            {sample.length > 40 ? `${sample.substring(0, 40)}...` : sample}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </form>
 
