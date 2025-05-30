@@ -10,9 +10,37 @@ const app = express();
 const PORT = 3001;
 
 // Middleware
-app.use(cors());
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Allow requests from any origin (including no origin for same-server requests)
+        callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Length', 'Content-Type']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/gifs', express.static(path.join(__dirname, 'sample-gifs')));
+
+// Request logging middleware for debugging
+app.use((req, res, next) => {
+    const timestamp = new Date().toISOString();
+    const origin = req.headers.origin || 'no-origin';
+    console.log(`[${timestamp}] ${req.method} ${req.url} - Origin: ${origin}`);
+    next();
+});
+
+// Handle preflight requests explicitly
+app.options('*', (req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Max-Age', '86400'); // 24 hours
+    res.sendStatus(204);
+});
 
 // Sample GIF URLs (using popular GIF hosting services)
 const sampleGifs = [
@@ -211,4 +239,6 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`❤️  Health check: GET http://0.0.0.0:${PORT}/api/health`);
     console.log(`💡 Sample prompts: GET http://0.0.0.0:${PORT}/api/sample-prompts`);
     console.log(`🌐 Also accessible via localhost: http://localhost:${PORT}`);
+    console.log(`🔓 CORS enabled - accepting requests from any origin`);
+    console.log(`📡 Supports cross-origin requests from different servers`);
 }); 
