@@ -64,11 +64,11 @@ function getRelevantGif(prompt) {
 // Mock text-to-scene endpoint (backward compatible with text-to-gif)
 app.post('/api/text-to-gif', async (req, res) => {
     try {
-        const { prompt } = req.body;
+        const { text_prompt } = req.body;
 
-        if (!prompt || typeof prompt !== 'string') {
+        if (!text_prompt || typeof text_prompt !== 'string') {
             return res.status(400).json({
-                error: 'Invalid prompt. Please provide a text description.',
+                error: 'Invalid text_prompt. Please provide a text description.',
                 status: 'error'
             });
         }
@@ -86,17 +86,34 @@ app.post('/api/text-to-gif', async (req, res) => {
         }
 
         // Get relevant GIF based on prompt
-        const gifUrl = getRelevantGif(prompt);
+        const gifUrl = getRelevantGif(text_prompt);
 
-        res.json({
-            url: gifUrl, // Generic URL field
-            gif_url: gifUrl, // Backward compatibility
-            prompt: prompt,
-            status: 'success',
-            type: 'gif', // Can be 'gif', '3d-mesh', 'gaussian-splat', etc.
-            processing_time: Math.round(processingTime),
-            timestamp: new Date().toISOString()
-        });
+        try {
+            // Fetch the actual GIF file
+            const gifResponse = await fetch(gifUrl);
+            if (!gifResponse.ok) {
+                throw new Error('Failed to fetch GIF');
+            }
+
+            const gifBuffer = await gifResponse.arrayBuffer();
+
+            // Set headers for GIF file
+            res.set({
+                'Content-Type': 'image/gif',
+                'Content-Length': gifBuffer.byteLength,
+                'Cache-Control': 'public, max-age=31536000' // Cache for 1 year
+            });
+
+            // Send the GIF file
+            res.send(Buffer.from(gifBuffer));
+
+        } catch (fetchError) {
+            console.error('Error fetching GIF:', fetchError);
+            return res.status(500).json({
+                error: 'Failed to generate GIF file',
+                status: 'error'
+            });
+        }
 
     } catch (error) {
         console.error('Error processing request:', error);

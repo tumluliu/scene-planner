@@ -49,55 +49,79 @@ npm run preview
 
 ## API Integration
 
-The application is designed to work with an external HTTP API for text-to-scene conversion. You'll need to:
+The application uses a configurable API system for text-to-scene conversion.
 
-1. **Update the API endpoint** in `src/App.tsx`:
-   ```typescript
-   const response = await fetch('YOUR_API_ENDPOINT_HERE', {
-     method: 'POST',
-     headers: {
-       'Content-Type': 'application/json',
-     },
-     body: JSON.stringify({ prompt: prompt.trim() }),
-   })
+### Configuration
+
+The API base URL can be configured in several ways:
+
+1. **Environment Variables** (recommended):
+   ```bash
+   # Create a .env file in the project root
+   VITE_API_BASE_URL=http://localhost:3001
    ```
 
-2. **Expected API Response Format**:
-   ```json
-   {
-     "url": "https://example.com/generated-scene.gif",
-     "gif_url": "https://example.com/generated-scene.gif",
-     "type": "gif",
-     "status": "success"
-   }
+2. **Different Environment Examples**:
+   ```bash
+   # Development (default)
+   VITE_API_BASE_URL=http://localhost:3001
+   
+   # Production
+   VITE_API_BASE_URL=https://api.your-domain.com
+   
+   # Staging
+   VITE_API_BASE_URL=https://staging-api.your-domain.com
+   
+   # Docker development
+   VITE_API_BASE_URL=http://backend:3001
    ```
+
+3. **Automatic Detection**: If no environment variable is set, the app will automatically detect the hostname and use port 3001.
+
+### API Endpoints
+
+The application expects these endpoints:
+
+- `POST /api/text-to-gif` - Main generation endpoint
+- `GET /api/sample-prompts` - Fetch sample prompts
+- `GET /api/health` - Health check
+
+### Expected API Request Format
+
+```json
+{
+  "text_prompt": "A cat wearing sunglasses walking through a neon-lit cyberpunk city"
+}
+```
+
+### Expected API Response
+
+The `/api/text-to-gif` endpoint should return a GIF file directly with:
+- Content-Type: `image/gif`
+- The actual GIF file content as the response body
 
 ### API Requirements
 
 Your API should:
-- Accept POST requests with JSON body containing a `prompt` field
-- Return a JSON response with a `url` field (and optionally `gif_url` for backward compatibility)
-- Include a `type` field indicating the output format ('gif', '3d-mesh', 'gaussian-splat', etc.)
+- Accept POST requests with JSON body containing a `text_prompt` field
+- Return the generated GIF file directly (not JSON)
+- Set proper `Content-Type: image/gif` header
 - Handle CORS if the API is on a different domain
 - Support reasonable timeout limits for scene generation
 
-### Example API Integration
+### Mock API Server
 
-```typescript
-// Example with authentication
-const response = await fetch('/api/text-to-gif', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${apiKey}`,
-  },
-  body: JSON.stringify({ 
-    prompt: prompt.trim(),
-    style: 'cinematic',
-    duration: 3
-  }),
-})
+A mock API server is included for development:
+
+```bash
+# Start the mock server
+node server/mock-api.js
 ```
+
+The mock server provides:
+- Sample GIF responses based on keywords
+- Realistic processing delays
+- Error simulation for testing
 
 ## Customization
 

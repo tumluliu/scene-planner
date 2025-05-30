@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Sparkles, Download, Loader2, Image as ImageIcon, Wand2 } from 'lucide-react'
 import { clsx } from 'clsx'
+import { getApiUrl } from './config'
 
 interface GenerationResult {
     url: string
@@ -21,8 +22,7 @@ function App() {
     useEffect(() => {
         const fetchSamplePrompts = async () => {
             try {
-                const apiHost = window.location.hostname;
-                const response = await fetch(`http://${apiHost}:3001/api/sample-prompts`);
+                const response = await fetch(getApiUrl('/api/sample-prompts'));
 
                 if (response.ok) {
                     const data = await response.json();
@@ -62,27 +62,38 @@ function App() {
 
         try {
             // Using mock API endpoint for testing
-            // Use the same host as the frontend but on port 3001
-            const apiHost = window.location.hostname;
-            const response = await fetch(`http://${apiHost}:3001/api/text-to-gif`, {
+            const response = await fetch(getApiUrl('/api/text-to-gif'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ prompt: prompt.trim() }),
+                body: JSON.stringify({ text_prompt: prompt.trim() }),
             })
 
             if (!response.ok) {
-                throw new Error(`API request failed: ${response.status}`)
+                // Try to parse error as JSON if possible
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `API request failed: ${response.status}`);
+                } catch {
+                    throw new Error(`API request failed: ${response.status}`);
+                }
             }
 
-            const data = await response.json()
+            // Handle GIF file response
+            const gifBlob = await response.blob();
+            const gifUrl = URL.createObjectURL(gifBlob);
+
+            // Clean up previous blob URL to prevent memory leaks
+            if (generationResult?.url && generationResult.url.startsWith('blob:')) {
+                URL.revokeObjectURL(generationResult.url);
+            }
 
             setGenerationResult({
-                url: data.gif_url || data.url,
+                url: gifUrl,
                 prompt: prompt.trim(),
                 timestamp: Date.now(),
-                type: data.type || 'gif'
+                type: 'gif'
             })
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to generate GIF')
@@ -102,6 +113,15 @@ function App() {
             document.body.removeChild(link)
         }
     }
+
+    // Clean up blob URLs when component unmounts or when generating new results
+    useEffect(() => {
+        return () => {
+            if (generationResult?.url && generationResult.url.startsWith('blob:')) {
+                URL.revokeObjectURL(generationResult.url)
+            }
+        }
+    }, [generationResult?.url])
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center p-4">
