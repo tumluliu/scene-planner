@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Sparkles, Download, Loader2, Image as ImageIcon, Wand2 } from 'lucide-react'
+import { Sparkles, Download, Loader2, Image as ImageIcon, Wand2, Shuffle } from 'lucide-react'
 import { clsx } from 'clsx'
 import { getApiUrl } from './config'
 
@@ -8,11 +8,13 @@ interface GenerationResult {
     prompt: string
     timestamp: number
     type?: string // 'gif' | '3d-mesh' | 'gaussian-splat' | etc.
+    sceneId?: string // Add scene ID for rearrangement
 }
 
 function App() {
     const [prompt, setPrompt] = useState('')
     const [isLoading, setIsLoading] = useState(false)
+    const [isRearranging, setIsRearranging] = useState(false)
     const [generationResult, setGenerationResult] = useState<GenerationResult | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [samplePrompts, setSamplePrompts] = useState<string[]>([])
@@ -89,16 +91,72 @@ function App() {
                 URL.revokeObjectURL(generationResult.url);
             }
 
+            // Generate a scene ID (in a real app, this might come from the server)
+            const sceneId = `scene_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
             setGenerationResult({
                 url: gifUrl,
                 prompt: prompt.trim(),
                 timestamp: Date.now(),
-                type: 'gif'
+                type: 'gif',
+                sceneId: sceneId
             })
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to generate GIF')
         } finally {
             setIsLoading(false)
+        }
+    }
+
+    const handleRearrange = async () => {
+        if (!generationResult?.sceneId) return
+
+        setIsRearranging(true)
+        setError(null)
+
+        try {
+            const response = await fetch(getApiUrl('/api/rearrange-scene'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    scene_id: generationResult.sceneId,
+                    original_prompt: generationResult.prompt
+                }),
+            })
+
+            if (!response.ok) {
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Rearrange request failed: ${response.status}`);
+                } catch {
+                    throw new Error(`Rearrange request failed: ${response.status}`);
+                }
+            }
+
+            // Handle rearranged GIF file response
+            const gifBlob = await response.blob();
+            const gifUrl = URL.createObjectURL(gifBlob);
+
+            // Clean up previous blob URL to prevent memory leaks
+            if (generationResult.url && generationResult.url.startsWith('blob:')) {
+                URL.revokeObjectURL(generationResult.url);
+            }
+
+            // Generate a new scene ID for the rearranged scene
+            const newSceneId = `scene_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+            setGenerationResult({
+                ...generationResult,
+                url: gifUrl,
+                timestamp: Date.now(),
+                sceneId: newSceneId
+            })
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to rearrange scene')
+        } finally {
+            setIsRearranging(false)
         }
     }
 
@@ -239,16 +297,38 @@ function App() {
                                 <button
                                     onClick={handleDownload}
                                     className="button-secondary flex items-center gap-2"
+                                    disabled={isRearranging}
                                 >
                                     <Download className="w-4 h-4" />
                                     Download
+                                </button>
+                                <button
+                                    onClick={handleRearrange}
+                                    disabled={isRearranging || !generationResult.sceneId}
+                                    className={clsx(
+                                        'button-primary flex items-center gap-2',
+                                        (isRearranging || !generationResult.sceneId) && 'opacity-50 cursor-not-allowed'
+                                    )}
+                                >
+                                    {isRearranging ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Rearranging...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Wand2 className="w-4 h-4" />
+                                            Rearrange
+                                        </>
+                                    )}
                                 </button>
                                 <button
                                     onClick={() => {
                                         setGenerationResult(null)
                                         setPrompt('')
                                     }}
-                                    className="button-primary"
+                                    className="button-secondary"
+                                    disabled={isRearranging}
                                 >
                                     Create Another
                                 </button>

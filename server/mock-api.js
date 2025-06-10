@@ -74,6 +74,59 @@ const keywordGifs = {
     magic: 'https://media.giphy.com/media/3o7absbD7PbTFQa0c8/giphy.gif',
 };
 
+// Alternative GIFs for rearrangement - different perspectives/arrangements of similar themes
+const rearrangeGifs = {
+    cat: [
+        'https://media.giphy.com/media/mlvseq9yvZhba/giphy.gif', // Different cat GIF
+        'https://media.giphy.com/media/ICOgUNjpvO0PC/giphy.gif', // Another cat variation
+        'https://media.giphy.com/media/kFgzrTt798d2w/giphy.gif', // Cat playing
+    ],
+    dog: [
+        'https://media.giphy.com/media/4Zo41lhzKt6iZ8xff9/giphy.gif',
+        'https://media.giphy.com/media/l3V0lsGtTMSB5YNgc/giphy.gif',
+    ],
+    space: [
+        'https://media.giphy.com/media/xT9IgN8YKRhByRBxK0/giphy.gif', // Different space scene
+        'https://media.giphy.com/media/3o7abA6VhHdnt6R8x2/giphy.gif', // Space exploration
+        'https://media.giphy.com/media/l0HlNQ03J5JxX6lva/giphy.gif', // Cosmic scene
+    ],
+    ocean: [
+        'https://media.giphy.com/media/3o7abNwhf1SbtIKYj6/giphy.gif', // Different ocean waves
+        'https://media.giphy.com/media/l0HlTy9x8FZo0XO4U/giphy.gif', // Underwater view
+    ],
+    fire: [
+        'https://media.giphy.com/media/13HgwGsXF0aiGY/giphy.gif', // Different fire animation
+        'https://media.giphy.com/media/l0MYAn3XZeCPFGHV6/giphy.gif', // Campfire
+    ],
+    cyberpunk: [
+        'https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif', // Neon city from different angle
+        'https://media.giphy.com/media/l0HlALoyOgM02LhAc/giphy.gif', // Cyberpunk street
+    ],
+    city: [
+        'https://media.giphy.com/media/l0HlHFRbmaZtBRhXG/giphy.gif', // City from different perspective
+        'https://media.giphy.com/media/3o7abMQoF1K4z7wq3K/giphy.gif', // Night city
+    ],
+    forest: [
+        'https://media.giphy.com/media/l0HlLzQ8YH6s7v7TW/giphy.gif', // Forest from different angle
+        'https://media.giphy.com/media/3o7abKO4TNnF5vhgfw/giphy.gif', // Mystical forest
+    ],
+    water: [
+        'https://media.giphy.com/media/l0HlGkBl5nJ5v7RyU/giphy.gif', // Water from different view
+        'https://media.giphy.com/media/xT9IgAzXkCgAqHMvkI/giphy.gif', // Rain/water drops
+    ],
+    lightning: [
+        'https://media.giphy.com/media/l0HlFl0z5VvOJV3UI/giphy.gif', // Lightning from different angle
+        'https://media.giphy.com/media/3o7abJtDvSKfPHNjKE/giphy.gif', // Storm scene
+    ],
+    default: [
+        'https://media.giphy.com/media/xT9IgN8YKRhByRBxK0/giphy.gif',
+        'https://media.giphy.com/media/3o7abA6VhHdnt6R8x2/giphy.gif',
+        'https://media.giphy.com/media/l0HlNQ03J5JxX6lva/giphy.gif',
+        'https://media.giphy.com/media/13HgwGsXF0aiGY/giphy.gif',
+        'https://media.giphy.com/media/l0MYAn3XZeCPFGHV6/giphy.gif',
+    ]
+};
+
 // Helper function to find relevant GIF based on prompt
 function getRelevantGif(prompt) {
     const lowerPrompt = prompt.toLowerCase();
@@ -87,6 +140,23 @@ function getRelevantGif(prompt) {
 
     // Return random GIF if no keywords match
     return sampleGifs[Math.floor(Math.random() * sampleGifs.length)];
+}
+
+// Helper function to get a rearranged version of a scene
+function getRearrangedGif(prompt) {
+    const lowerPrompt = prompt.toLowerCase();
+
+    // Find which category this prompt belongs to
+    for (const [keyword, _] of Object.entries(keywordGifs)) {
+        if (lowerPrompt.includes(keyword) && rearrangeGifs[keyword]) {
+            const alternatives = rearrangeGifs[keyword];
+            return alternatives[Math.floor(Math.random() * alternatives.length)];
+        }
+    }
+
+    // If no specific category found, use default rearrange options
+    const defaultOptions = rearrangeGifs.default;
+    return defaultOptions[Math.floor(Math.random() * defaultOptions.length)];
 }
 
 // Mock text-to-scene endpoint (backward compatible with text-to-gif)
@@ -202,6 +272,80 @@ app.post('/api/text-to-scene', async (req, res) => {
     }
 });
 
+// Mock rearrange-scene endpoint
+app.post('/api/rearrange-scene', async (req, res) => {
+    try {
+        const { scene_id, original_prompt } = req.body;
+
+        if (!scene_id || typeof scene_id !== 'string') {
+            return res.status(400).json({
+                error: 'Invalid scene_id. Please provide a valid scene identifier.',
+                status: 'error'
+            });
+        }
+
+        if (!original_prompt || typeof original_prompt !== 'string') {
+            return res.status(400).json({
+                error: 'Invalid original_prompt. Please provide the original scene description.',
+                status: 'error'
+            });
+        }
+
+        console.log(`🔄 Rearranging scene: ${scene_id} - "${original_prompt}"`);
+
+        // Simulate processing time (1-2 seconds, slightly faster than generation)
+        const processingTime = Math.random() * 1000 + 1000;
+        await new Promise(resolve => setTimeout(resolve, processingTime));
+
+        // Occasionally simulate errors for testing (lower chance than generation)
+        if (Math.random() < 0.05) { // 5% chance of error
+            return res.status(500).json({
+                error: 'Scene rearrangement failed. Please try again.',
+                status: 'error'
+            });
+        }
+
+        // Get a rearranged version of the scene
+        const rearrangedGifUrl = getRearrangedGif(original_prompt);
+
+        try {
+            // Fetch the actual GIF file
+            const gifResponse = await fetch(rearrangedGifUrl);
+            if (!gifResponse.ok) {
+                throw new Error('Failed to fetch rearranged GIF');
+            }
+
+            const gifBuffer = await gifResponse.arrayBuffer();
+
+            // Set headers for GIF file
+            res.set({
+                'Content-Type': 'image/gif',
+                'Content-Length': gifBuffer.byteLength,
+                'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+                'X-Scene-Id': scene_id, // Include scene ID in response headers
+                'X-Rearranged': 'true' // Indicate this is a rearranged scene
+            });
+
+            // Send the GIF file
+            res.send(Buffer.from(gifBuffer));
+
+        } catch (fetchError) {
+            console.error('Error fetching rearranged GIF:', fetchError);
+            return res.status(500).json({
+                error: 'Failed to generate rearranged GIF file',
+                status: 'error'
+            });
+        }
+
+    } catch (error) {
+        console.error('Error processing rearrange request:', error);
+        res.status(500).json({
+            error: 'Internal server error',
+            status: 'error'
+        });
+    }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({
@@ -236,6 +380,7 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Mock Scene Generation API running on http://0.0.0.0:${PORT}`);
     console.log(`📝 Legacy endpoint: POST http://0.0.0.0:${PORT}/api/text-to-gif`);
     console.log(`🎨 Generic endpoint: POST http://0.0.0.0:${PORT}/api/text-to-scene`);
+    console.log(`🔄 Rearrange endpoint: POST http://0.0.0.0:${PORT}/api/rearrange-scene`);
     console.log(`❤️  Health check: GET http://0.0.0.0:${PORT}/api/health`);
     console.log(`💡 Sample prompts: GET http://0.0.0.0:${PORT}/api/sample-prompts`);
     console.log(`🌐 Also accessible via localhost: http://localhost:${PORT}`);
