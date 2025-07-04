@@ -100,11 +100,13 @@ function App() {
                 sceneId = customSceneId;
             } else if (contentDisposition) {
                 // Extract filename from Content-Disposition header
-                const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                // Format: attachment; filename="xxxx-xxxx.gif"
+                const filenameMatch = contentDisposition.match(/filename=["']?([^"';]+)["']?/);
                 if (filenameMatch) {
-                    const filename = filenameMatch[1].replace(/['"]/g, '');
-                    // Extract UUID from filename (remove .gif extension)
+                    const filename = filenameMatch[1];
+                    // Extract scene ID from filename (remove .gif extension)
                     sceneId = filename.replace(/\.gif$/, '');
+                    console.log(`Extracted scene ID from Content-Disposition: ${sceneId}`);
                 }
             }
 
@@ -167,11 +169,13 @@ function App() {
                 newSceneId = customSceneId;
             } else if (contentDisposition) {
                 // Extract filename from Content-Disposition header
-                const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                // Format: attachment; filename="xxxx-xxxx.gif"
+                const filenameMatch = contentDisposition.match(/filename=["']?([^"';]+)["']?/);
                 if (filenameMatch) {
-                    const filename = filenameMatch[1].replace(/['"]/g, '');
-                    // Extract UUID from filename (remove .gif extension)
+                    const filename = filenameMatch[1];
+                    // Extract scene ID from filename (remove .gif extension)
                     newSceneId = filename.replace(/\.gif$/, '');
+                    console.log(`Extracted new scene ID from Content-Disposition: ${newSceneId}`);
                 }
             }
 
