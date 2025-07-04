@@ -91,8 +91,22 @@ function App() {
                 URL.revokeObjectURL(generationResult.url);
             }
 
-            // Generate a scene ID (in a real app, this might come from the server)
-            const sceneId = `scene_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            // Extract scene ID from Content-Disposition header or custom header
+            let sceneId = '';
+            const contentDisposition = response.headers.get('Content-Disposition');
+            const customSceneId = response.headers.get('X-Scene-ID');
+
+            if (customSceneId) {
+                sceneId = customSceneId;
+            } else if (contentDisposition) {
+                // Extract filename from Content-Disposition header
+                const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (filenameMatch) {
+                    const filename = filenameMatch[1].replace(/['"]/g, '');
+                    // Extract UUID from filename (remove .gif extension)
+                    sceneId = filename.replace(/\.gif$/, '');
+                }
+            }
 
             setGenerationResult({
                 url: gifUrl,
@@ -144,8 +158,22 @@ function App() {
                 URL.revokeObjectURL(generationResult.url);
             }
 
-            // Generate a new scene ID for the rearranged scene
-            const newSceneId = `scene_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            // Extract new scene ID from server response
+            let newSceneId = '';
+            const contentDisposition = response.headers.get('Content-Disposition');
+            const customSceneId = response.headers.get('X-Scene-ID');
+
+            if (customSceneId) {
+                newSceneId = customSceneId;
+            } else if (contentDisposition) {
+                // Extract filename from Content-Disposition header
+                const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (filenameMatch) {
+                    const filename = filenameMatch[1].replace(/['"]/g, '');
+                    // Extract UUID from filename (remove .gif extension)
+                    newSceneId = filename.replace(/\.gif$/, '');
+                }
+            }
 
             setGenerationResult({
                 ...generationResult,
@@ -161,11 +189,11 @@ function App() {
     }
 
     const handleDownload = () => {
-        if (generationResult?.url) {
+        if (generationResult?.url && generationResult?.sceneId) {
             const link = document.createElement('a')
             link.href = generationResult.url
             const extension = generationResult.type === 'gif' ? 'gif' : 'file'
-            link.download = `scene-${Date.now()}.${extension}`
+            link.download = `${generationResult.sceneId}.${extension}`
             document.body.appendChild(link)
             link.click()
             document.body.removeChild(link)

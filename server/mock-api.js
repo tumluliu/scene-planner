@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { randomUUID } from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,7 +19,7 @@ const corsOptions = {
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    exposedHeaders: ['Content-Length', 'Content-Type']
+    exposedHeaders: ['Content-Length', 'Content-Type', 'X-Scene-ID', 'X-Original-Scene-ID', 'X-Rearranged', 'Content-Disposition']
 };
 
 app.use(cors(corsOptions));
@@ -183,6 +184,10 @@ app.post('/api/text-to-gif', async (req, res) => {
             });
         }
 
+        // Generate UUID for the scene
+        const sceneId = randomUUID();
+        console.log(`🎨 Generated scene ID: ${sceneId} for prompt: "${text_prompt}"`);
+
         // Get relevant GIF based on prompt
         const gifUrl = getRelevantGif(text_prompt);
 
@@ -195,11 +200,13 @@ app.post('/api/text-to-gif', async (req, res) => {
 
             const gifBuffer = await gifResponse.arrayBuffer();
 
-            // Set headers for GIF file
+            // Set headers for GIF file including scene ID
             res.set({
                 'Content-Type': 'image/gif',
                 'Content-Length': gifBuffer.byteLength,
-                'Cache-Control': 'public, max-age=31536000' // Cache for 1 year
+                'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+                'X-Scene-ID': sceneId, // Include scene ID in custom header
+                'Content-Disposition': `attachment; filename="${sceneId}.gif"` // Also include in filename
             });
 
             // Send the GIF file
@@ -293,6 +300,10 @@ app.post('/api/rearrange-scene', async (req, res) => {
 
         console.log(`🔄 Rearranging scene: ${scene_id} - "${original_prompt}"`);
 
+        // Generate new UUID for the rearranged scene
+        const newSceneId = randomUUID();
+        console.log(`🎨 Generated new scene ID: ${newSceneId} for rearranged scene`);
+
         // Simulate processing time (1-2 seconds, slightly faster than generation)
         const processingTime = Math.random() * 1000 + 1000;
         await new Promise(resolve => setTimeout(resolve, processingTime));
@@ -317,13 +328,15 @@ app.post('/api/rearrange-scene', async (req, res) => {
 
             const gifBuffer = await gifResponse.arrayBuffer();
 
-            // Set headers for GIF file
+            // Set headers for GIF file with new scene ID
             res.set({
                 'Content-Type': 'image/gif',
                 'Content-Length': gifBuffer.byteLength,
                 'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
-                'X-Scene-Id': scene_id, // Include scene ID in response headers
-                'X-Rearranged': 'true' // Indicate this is a rearranged scene
+                'X-Scene-ID': newSceneId, // Include new scene ID in response headers
+                'X-Original-Scene-ID': scene_id, // Include original scene ID for reference
+                'X-Rearranged': 'true', // Indicate this is a rearranged scene
+                'Content-Disposition': `attachment; filename="${newSceneId}.gif"` // Include new scene ID in filename
             });
 
             // Send the GIF file
